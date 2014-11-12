@@ -1,89 +1,134 @@
-
 <html>
-<head>
-<meta charset="utf-8">
-<style>
+<head><meta charset="utf-8">
+<script src="http://mbostock.github.com/d3/d3.v2.js?2.8.1"></script><script src="http://d3js.org/d3.v2.js"></script>
 
-h1 {
-  position: absolute;
-  top: 280px;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 18px;
-  text-align: center;
-  width: 960px;
-}
 
-</style>
-</head>
+
+		</head>
+
+
 <body>
-<h1>Afghanistan</h1>
-<script src="http://d3js.org/d3.v3.min.js"></script>
-<script src="http://d3js.org/queue.v1.min.js"></script>
-<script src="http://d3js.org/topojson.v1.min.js"></script>
-<script>
-var width = 960,
-    height = 500;
+<div id="viz"></div>
+<div id="scale" style="margin-left:60px;font-size:25px">IV: World Map 2014<span></span></div>
 
-var projection = d3.geo.orthographic()
-    .scale(248)
-    .clipAngle(90);
+<script type="text/javascript">
 
-var canvas = d3.select("body").append("canvas")
-    .attr("width", width)
-    .attr("height", height);
+		var feature;
+		
+		var width = 297,
+		    height = 235;
+		
+		var lat = 99.03, lon = 42.37;
+		
+		var projection = d3.geo.azimuthal()
+		    .scale(95)
+		    .origin([lat,lon])
+		    .mode("orthographic")
+		    .translate([160, 100]);
 
-var c = canvas.node().getContext("2d");
+		var circle = d3.geo.greatCircle()
+		    .origin(projection.origin());
 
-var path = d3.geo.path()
-    .projection(projection)
-    .context(c);
+		// TODO fix d3.geo.azimuthal to be consistent with scale
+		var scale = {
+		  orthographic: 95,
+		  stereographic: 95,
+		  gnomonic: 95,
+		  equidistant: 95 / Math.PI * 2,
+		  equalarea: 95 / Math.SQRT2
+		};
 
-var title = d3.select("h1");
+		var path = d3.geo.path()
+		    .projection(projection);
 
-queue()
-    .defer(d3.json, "world-110m.json")
-    .defer(d3.tsv, "world-country-names.tsv")
-    .await(ready);
+		var svg = d3.select("#viz").append("svg:svg")
+		    .attr("width", width)
+		    .attr("height", height)
+		    .on("mousedown", mousedown);
 
-function ready(error, world, names) {
-  var globe = {type: "Sphere"},
-      land = topojson.feature(world, world.objects.land),
-      countries = topojson.feature(world, world.objects.countries).features,
-      borders = topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }),
-      i = -1,
-      n = countries.length;
 
-  countries = countries.filter(function(d) {
-    return names.some(function(n) {
-      if (d.id == n.id) return d.name = n.name;
-    });
-  }).sort(function(a, b) {
-    return a.name.localeCompare(b.name);
-  });
+		svg.append("rect")
+		    .attr("fill", "none")
+		    .attr("width", width)
+		    .attr("height", height)
+				.attr("pointer-events", "all");
+		
+		d3.json("./world-countries.json", function(collection) {
+		  feature = svg.selectAll("path")
+		      .data(collection.features)
+		      .enter().append("svg:path")
+					.on("mouseover", function(d) { d3.select(this).style("fill",
+					"#FF4040"); })
+					.on("mouseout", function(d) { d3.select(this).style("fill",
+					"#000000"); })
+					.on("click", click)
+		      .attr("d", clip);
 
-  (function transition() {
-    d3.transition()
-        .duration(1250)
-        .each("start", function() {
-          title.text(countries[i = (i + 1) % n].name);
-        })
-        .tween("rotate", function() {
-          var p = d3.geo.centroid(countries[i]),
-              r = d3.interpolate(projection.rotate(), [-p[0], -p[1]]);
-          return function(t) {
-            projection.rotate(r(t));
-            c.clearRect(0, 0, width, height);
-            c.fillStyle = "#bbb", c.beginPath(), path(land), c.fill();
-            c.fillStyle = "#f00", c.beginPath(), path(countries[i]), c.fill();
-            c.strokeStyle = "#fff", c.lineWidth = .5, c.beginPath(), path(borders), c.stroke();
-            c.strokeStyle = "#000", c.lineWidth = 2, c.beginPath(), path(globe), c.stroke();
-          };
-        })
-      .transition()
-        .each("end", transition);
-  })();
-}
-</script>
-aaa
+		  feature.append("svg:title")
+		      .text(function(d) { return d.properties.name; });
+		});
+
+		d3.select(window)
+		    .on("mousemove", mousemove)
+		    .on("mouseup", mouseup);
+
+		d3.select("select").on("change", function() {
+		  projection.mode(this.value).scale(scale[this.value]);
+		  refresh(750);
+		});
+
+		var m0,
+		    o0;
+		
+		function mousedown() {
+		  m0 = [d3.event.pageX, d3.event.pageY];
+		  o0 = projection.origin();
+		  d3.event.preventDefault();
+		}
+
+		function mousemove() {
+		  if (m0) {
+		    var m1 = [d3.event.pageX, d3.event.pageY],
+		        o1 = [o0[0] + (m0[0] - m1[0]) / 8, o0[1] + (m1[1] - m0[1]) / 8];
+		    projection.origin(o1);
+		    circle.origin(o1);
+		    refresh();
+		  }
+		}
+
+		function click() {
+		    var o1 = projection.invert(d3.mouse(this));
+		    var lat = o1[0]
+			lon = o1[1];
+		    console.log([o1]);
+		    projection.origin([o1]);
+		    circle.origin([o1]);
+		    refresh();
+		}
+		
+		
+		function mouseup() {
+		  if (m0) {
+		    mousemove();
+		    m0 = null;
+		  }
+		}
+		
+		function refresh(duration) {
+		  (duration ? feature.transition().duration(duration) : feature).attr("d", clip);
+		}
+
+		function clip(d) {
+		  return path(circle.clip(d));
+		}
+
+		</script>
+
+
 </body>
+
+
+
+
+
 </html>
