@@ -1,20 +1,137 @@
 <html>
-<head>
-<script type="text/javascript"
-  src="dygraph-combined.js"></script>
-</head>
+<head><meta charset="utf-8">
+<script src="http://mbostock.github.com/d3/d3.v2.js?2.8.1"></script><script src="http://d3js.org/d3.v2.js"></script>
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+
+
+		</head>
+
+
 <body>
-<div id="graphdiv3"
-  style="width:500px; height:300px;"></div>
+<div id="viz"></div>
+<div id="scale" style="margin-left:60px;font-size:25px">IV: World Map 2014<span></span></div>
+
 <script type="text/javascript">
-  g3 = new Dygraph(
-    document.getElementById("graphdiv3"),
-    "Data.csv",
-    {
-      rollPeriod: 7,
-      showRoller: true
-    }
-  );
-</script>
+
+		var feature;
+		
+		var width = 297,
+		    height = 235;
+		
+		var lat = 99.03, lon = 42.37;
+		
+		var projection = d3.geo.azimuthal()
+		    .scale(98)
+		    .origin([lat,lon])
+		    .mode("orthographic")
+		    .translate([160, 100]);
+
+		var circle = d3.geo.greatCircle()
+		    .origin(projection.origin());
+
+		// TODO fix d3.geo.azimuthal to be consistent with scale
+		var scale = {
+		  orthographic: 98,
+		  stereographic: 98,
+		  gnomonic: 98,
+		  equidistant: 98 / Math.PI * 2,
+		  equalarea: 98 / Math.SQRT2
+		};
+
+		var path = d3.geo.path()
+		    .projection(projection);
+
+		var svg = d3.select("#viz").append("svg:svg")
+		    .attr("width", width)
+		    .attr("height", height)
+		    .on("mousedown", mousedown);
+
+
+		svg.append("rect")
+		    .attr("fill", "none")
+		    .attr("width", width)
+		    .attr("height", height)
+				.attr("pointer-events", "all");
+		
+		d3.json("./world-countries.json", function(collection) {
+		  feature = svg.selectAll("path")
+		      .data(collection.features)
+		      .enter().append("svg:path")
+					.on("mouseover", function(d) { d3.select(this).style("fill",
+					"#FF4040"); })
+					.on("mouseout", function(d) { d3.select(this).style("fill",
+					"#000000"); })
+					.on("click", click)
+		      .attr("d", clip);
+
+		  feature.append("svg:title")
+		      .text(function(d) { return d.properties.name; });
+
+		});
+
+		d3.select(window)
+		    .on("mousemove", mousemove)
+		    .on("mouseup", mouseup);
+
+		d3.select("select").on("change", function() {
+		  projection.mode(this.value).scale(scale[this.value]);
+		  refresh(750);
+		});
+
+		var m0,
+		    o0;
+		
+		function mousedown() {
+		  m0 = [d3.event.pageX, d3.event.pageY];
+		  o0 = projection.origin();
+		  d3.event.preventDefault();
+		}
+
+		function mousemove() {
+		  if (m0) {
+		    var m1 = [d3.event.pageX, d3.event.pageY],
+		        o1 = [o0[0] + (m0[0] - m1[0]) / 8, o0[1] + (m1[1] - m0[1]) / 8];
+		    projection.origin(o1);
+		    circle.origin(o1);
+		    refresh();
+		  }
+		}
+
+		function click() {
+		    alert($(this).children().text());
+	            $(this).style("fill","#FF4040");
+		    var o1 = projection.invert(d3.mouse(this));
+		    var lat = o1[0]
+			lon = o1[1];
+		  //  console.log([o1]);
+		    //projection.origin([o1]);
+		    //circle.origin([o1]);
+		   // refresh();
+		}
+		
+		
+		function mouseup() {
+		  if (m0) {
+		    mousemove();
+		    m0 = null;
+		  }
+		}
+		
+		function refresh(duration) {
+		  (duration ? feature.transition().duration(duration) : feature).attr("d", clip);
+		}
+
+		function clip(d) {
+		  return path(circle.clip(d));
+		}
+
+		</script>
+
+
 </body>
+
+
+
+
+
 </html>
