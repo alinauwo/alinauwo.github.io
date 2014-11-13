@@ -1,7 +1,7 @@
 <html>
 <head><meta charset="utf-8">
 <script src="http://mbostock.github.com/d3/d3.v2.js?2.8.1"></script><script src="http://d3js.org/d3.v2.js"></script>
-
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
 
 
 		</head>
@@ -21,7 +21,7 @@
 		var lat = 99.03, lon = 42.37;
 		
 		var projection = d3.geo.azimuthal()
-		    .scale(95)
+		    .scale(98)
 		    .origin([lat,lon])
 		    .mode("orthographic")
 		    .translate([160, 100]);
@@ -31,11 +31,11 @@
 
 		// TODO fix d3.geo.azimuthal to be consistent with scale
 		var scale = {
-		  orthographic: 95,
-		  stereographic: 95,
-		  gnomonic: 95,
-		  equidistant: 95 / Math.PI * 2,
-		  equalarea: 95 / Math.SQRT2
+		  orthographic: 98,
+		  stereographic: 98,
+		  gnomonic: 98,
+		  equidistant: 98 / Math.PI * 2,
+		  equalarea: 98 / Math.SQRT2
 		};
 
 		var path = d3.geo.path()
@@ -66,6 +66,7 @@
 
 		  feature.append("svg:title")
 		      .text(function(d) { return d.properties.name; });
+
 		});
 
 		d3.select(window)
@@ -97,13 +98,15 @@
 		}
 
 		function click() {
+		    alert($(this).children().text());
+	            $(this).style("fill","#FF4040");
 		    var o1 = projection.invert(d3.mouse(this));
 		    var lat = o1[0]
 			lon = o1[1];
-		    console.log([o1]);
-		    projection.origin([o1]);
-		    circle.origin([o1]);
-		    refresh();
+		  //  console.log([o1]);
+		    //projection.origin([o1]);
+		    //circle.origin([o1]);
+		   // refresh();
 		}
 		
 		
